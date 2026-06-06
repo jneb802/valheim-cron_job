@@ -17,6 +17,8 @@ public class CronJob : BaseUnityPlugin
   {
     Logs = Logger;
     new Harmony(GUID).PatchAll();
+    CronManager.FromFile();
+    ResetStateManager.EnsureFile();
   }
   public void Start()
   {
