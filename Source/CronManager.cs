@@ -24,6 +24,7 @@ public class CronManager
   public static bool LogZone = true;
   public static bool LogJoin = true;
   public static bool LogSkipped = true;
+  public static float MaxMissedRealTimeSeconds = 300f;
   public static string DiscordConnector = "CronJob";
   public static DateTime Previous = DateTime.UtcNow;
   public static DateTime PreviousGameTime = new(Year2000, DateTimeKind.Utc);
@@ -55,19 +56,26 @@ public class CronManager
       // Not fully sure what happens if current time is before the previous time.
       // This can happen when setting the game time.
       if (t < p) continue;
-      if (t < ParseCron(cron.Schedule, p)) continue;
-      RunJob(cron.Commands, cron.Chance, cron.Log);
+      var scheduledTime = ParseCron(cron.Schedule, p);
+      if (scheduledTime == null || t < scheduledTime) continue;
+      if (!cron.UseGameTime && IsMissedRealTimeJobTooOld(time, scheduledTime.Value))
+      {
+        LogMissedJob(cron.Commands, scheduledTime.Value);
+        continue;
+      }
+      RunJob(cron.Commands, cron.Chance, cron.Log, cron.UseGameTime ? null : ParseCron(cron.Schedule, t));
     }
     Previous = time;
     PreviousGameTime = gameTime;
   }
-  private static void RunJob(string[] commands, float? chance, bool? log)
+  private static void RunJob(string[] commands, float? chance, bool? log, DateTime? next = null)
   {
     if (Roll(chance))
     {
       foreach (var cmd in commands)
       {
         Console.instance.TryRunCommand(cmd);
+        ResetStateManager.TrackExecutedCommand(cmd, DateTime.UtcNow, next);
         if (log ?? LogJobs)
           Log($"Executing: {cmd}");
       }
@@ -87,6 +95,16 @@ public class CronManager
     CronJob.Log.LogInfo(message);
     if (DiscordConnector != "")
       DiscordHook.SendMessage(DiscordConnector, message);
+  }
+  private static bool IsMissedRealTimeJobTooOld(DateTime time, DateTime scheduledTime)
+  {
+    return MaxMissedRealTimeSeconds >= 0f && (time - scheduledTime).TotalSeconds > MaxMissedRealTimeSeconds;
+  }
+  private static void LogMissedJob(string[] commands, DateTime scheduledTime)
+  {
+    if (!LogSkipped) return;
+    foreach (var cmd in commands)
+      CronJob.Log.LogInfo($"Skipping missed cron job scheduled at {scheduledTime:O}: {cmd}");
   }
   public static bool Execute(Vector2i zone, bool hasPlayer, DateTime? previous)
   {
@@ -136,7 +154,7 @@ public class CronManager
         .Replace("<x>", pos.x.ToString("F2", CultureInfo.InvariantCulture))
         .Replace("<y>", pos.y.ToString("F2", CultureInfo.InvariantCulture))
         .Replace("<z>", pos.z.ToString("F2", CultureInfo.InvariantCulture)));
-      RunJob(commands.ToArray(), cron.Chance, cron.Log);
+      RunJob(commands.ToArray(), cron.Chance, cron.Log, ParseCron(cron.Schedule, time));
     }
     return true;
   }
@@ -187,10 +205,17 @@ public class CronManager
       var yaml = Data.Serializer().Serialize(new CronData());
       File.WriteAllText(FilePath, yaml);
     }
+    ResetStateManager.EnsureFile();
   }
   private static bool ParseTimeZone(string timezone)
   {
     timezone = timezone.ToLower();
+    if (timezone == "utc")
+    {
+      TimeZone = TimeZoneInfo.Utc;
+      return true;
+    }
+
     foreach (var tz in TimeZoneInfo.GetSystemTimeZones())
     {
       if (tz.Id.ToLower() == timezone || tz.DisplayName.ToLower() == timezone)
@@ -230,6 +255,7 @@ public class CronManager
       LogZone = data.logZone;
       LogJoin = data.logJoin;
       LogSkipped = data.logSkipped;
+      MaxMissedRealTimeSeconds = data.maxMissedRealTimeSeconds;
       data.join.ForEach(ReplaceParameters);
       data.zone.ForEach(ReplaceParameters);
       data.jobs.ForEach(ReplaceParameters);
