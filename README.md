@@ -28,6 +28,31 @@ After starting the server, `cron.yaml` and `cron_track.yaml` files are created i
   - Other message types can also be used.
   - Value false disables the Discord Connector logging.
 
+## Reset state file
+
+When a scheduled command matches a known Praetoris reset command, Cron Job writes `praetoris_resets.json` in the BepInEx config folder. Other server-side mods can read this file to answer player commands without contacting Discord or an external bot.
+
+Tracked reset commands include biome location resets, Black Forest dungeons, Swamp crypts, Ashlands forts, and vegetation/resource resets.
+
+Example:
+
+```json
+{
+  "generated_at": "2026-05-12T00:00:00.0000000Z",
+  "resets": {
+    "copper": {
+      "label": "Copper Node Reset",
+      "category": "vegetation",
+      "biome": "blackforest",
+      "vegetation": "copper",
+      "last": "2026-05-10T01:30:42.9320000Z",
+      "next": "2026-05-13T01:30:42.9320000Z",
+      "interval_seconds": 259200
+    }
+  }
+}
+```
+
 ## Jobs
 
 - command: Command to execute.

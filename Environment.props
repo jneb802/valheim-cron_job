@@ -79,13 +79,4 @@
             <Private>false</Private>
         </Reference>
     </ItemGroup>
-
-    <!-- Mod dependencies (installed via Thunderstore) -->
-    <ItemGroup>
-        <Reference Include="YamlDotNet">
-            <HintPath>$(BEPINEX_PLUGINS)/ValheimModding-YamlDotNet/YamlDotNet.dll</HintPath>
-            <Private>false</Private>
-        </Reference>
-    </ItemGroup>
-
 </Project>

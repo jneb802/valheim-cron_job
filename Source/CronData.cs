@@ -23,6 +23,8 @@ public class CronData
   public bool logJoin = true;
   [DefaultValue(true)]
   public bool logSkipped = true;
+  [DefaultValue(300f)]
+  public float maxMissedRealTimeSeconds = 300f;
   [DefaultValue("true")]
   public string discordConnector = "true";
 }
