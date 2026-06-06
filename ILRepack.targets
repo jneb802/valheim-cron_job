@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <Target Name="ILRepacker" AfterTargets="Build">
+        <ItemGroup>
+            <InputAssemblies Include="$(TargetPath)" />
+            <InputAssemblies Include="$(TargetDir)Cronos.dll" />
+            <SearchDirs Include="$(OutputPath)" />
+            <SearchDirs Include="$(BEPINEX_CORE)" />
+            <SearchDirs Include="$(VALHEIM_MANAGED)" />
+            <SearchDirs Include="$(PUBLICIZED_PATH)" />
+        </ItemGroup>
+        <ILRepack Parallel="true" DebugInfo="false" Internalize="true" InputAssemblies="@(InputAssemblies)" OutputFile="$(TargetPath)" TargetKind="SameAsPrimaryAssembly" LibraryPath="@(SearchDirs)" />
+    </Target>
+</Project>
