@@ -14,16 +14,18 @@ public static class ResetStateManager
   private static readonly string FilePath = Path.Combine(Paths.ConfigPath, FileName);
   private static readonly List<ResetSpec> Specs =
   [
-    new("meadows_locations", "Meadows Location Reset", "location", "meadows", "", TimeSpan.FromDays(3), "locations_reset", "WoodHouse1"),
-    new("blackforest_locations", "Black Forest Location Reset", "location", "blackforest", "", TimeSpan.FromDays(3), "locations_reset", "Ruin1"),
-    new("swamp_locations", "Swamp Location Reset", "location", "swamp", "", TimeSpan.FromDays(3), "locations_reset", "SwampHut1"),
-    new("mountain_locations", "Mountain Location Reset", "location", "mountain", "", TimeSpan.FromDays(3), "locations_reset", "MountainWell1"),
-    new("plains_locations", "Plains Location Reset", "location", "plains", "", TimeSpan.FromDays(3), "locations_reset", "GoblinCamp2"),
-    new("mistlands_locations", "Mistlands Location Reset", "location", "mistlands", "", TimeSpan.FromDays(3), "locations_reset", "Mistlands_RockSpire1"),
-    new("ashlands_locations", "Ashlands Location Reset", "location", "ashlands", "", TimeSpan.FromDays(3), "locations_reset", "CharredFortress"),
-    new("blackforest_dungeons", "Black Forest Dungeon Reset", "dungeon", "blackforest", "", TimeSpan.FromDays(3), "locations_reset", "Hildir_crypt"),
-    new("swamp_dungeons", "Swamp Crypt Reset", "dungeon", "swamp", "", TimeSpan.FromDays(3), "locations_reset", "SunkenCrypt4"),
-    new("ashlands_forts", "Ashlands Fort Reset", "dungeon", "ashlands", "", TimeSpan.FromDays(3), "locations_reset", "MWL_AshlandsFort"),
+    new("meadows_locations", "Meadows Location Reset", "location", "meadows", "", TimeSpan.FromDays(3), "locations_reset", "ShipSetting01", "MWL_Ruins1"),
+    new("meadows_beehive_locations", "Meadows Beehive Location Reset", "location", "meadows", "", TimeSpan.FromDays(2), "locations_reset", "WoodHouse1"),
+    new("blackforest_locations", "Black Forest Location Reset", "location", "blackforest", "", TimeSpan.FromDays(3), "locations_reset", "Ruin1", "MWL_RuinsArena2"),
+    new("swamp_locations", "Swamp Location Reset", "location", "swamp", "", TimeSpan.FromDays(3), "locations_reset", "SwampHut1", "MWL_GuckPit1"),
+    new("mountain_locations", "Mountain Location Reset", "location", "mountain", "", TimeSpan.FromDays(3), "locations_reset", "MountainWell1", "MWL_StoneCastle1"),
+    new("plains_locations", "Plains Location Reset", "location", "plains", "", TimeSpan.FromDays(3), "locations_reset", "GoblinCamp2", "MWL_FulingRock1"),
+    new("mistlands_locations", "Mistlands Location Reset", "location", "mistlands", "", TimeSpan.FromDays(3), "locations_reset", "Mistlands_RockSpire1", "MWL_MistFort2"),
+    new("ashlands_locations", "Ashlands Location Reset", "location", "ashlands", "", TimeSpan.FromDays(3), "locations_reset", "CharredStone_Spawner", "MWL_AshTower1"),
+    new("blackforest_dungeons", "Black Forest Dungeon Reset", "dungeon", "blackforest", "", TimeSpan.FromDays(1), "locations_reset", "Hildir_crypt"),
+    new("swamp_dungeons", "Swamp Crypt Reset", "dungeon", "swamp", "", TimeSpan.FromDays(2), "locations_reset", "SunkenCrypt4"),
+    new("mistlands_dungeons", "Mistlands Dungeon Reset", "dungeon", "mistlands", "", TimeSpan.FromDays(3), "locations_reset", "Mistlands_DvergrTownEntrance1"),
+    new("ashlands_forts", "Ashlands Fort Reset", "dungeon", "ashlands", "", TimeSpan.FromDays(1), "locations_reset", "CharredFortress", "MWL_AshlandsFort1"),
     new("vegetation", "Meadows Vegetation Reset", "vegetation", "meadows", "meadows", TimeSpan.FromHours(12), "vegetation_reset", "Pickable_Stone"),
     new("tin", "Tin Node Reset", "vegetation", "blackforest", "tin", TimeSpan.FromHours(24), "vegetation_reset", "MineRock_Tin"),
     new("obsidian", "Obsidian Node Reset", "vegetation", "mountain", "obsidian", TimeSpan.FromHours(24), "vegetation_reset", "MineRock_Obsidian"),
@@ -176,7 +178,7 @@ public static class ResetStateManager
   private static string Format(DateTime value) => Normalize(value).ToString("O");
   private static string Escape(string value) => value.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
-  private sealed class ResetSpec(string key, string label, string category, string biome, string vegetation, TimeSpan interval, params string[] matchParts)
+  private sealed class ResetSpec(string key, string label, string category, string biome, string vegetation, TimeSpan interval, string commandName, params string[] targetNames)
   {
     public string Key { get; } = key;
     public string Label { get; } = label;
@@ -184,10 +186,23 @@ public static class ResetStateManager
     public string Biome { get; } = biome;
     public string Vegetation { get; } = vegetation;
     public TimeSpan Interval { get; } = interval;
-    private string[] MatchParts { get; } = matchParts;
+    private string CommandName { get; } = commandName;
+    private HashSet<string> TargetNames { get; } = targetNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-    public bool IsMatch(string command) =>
-      MatchParts.All(part => command.IndexOf(part, StringComparison.OrdinalIgnoreCase) >= 0);
+    public bool IsMatch(string command)
+    {
+      string[] tokens = command.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+      if (tokens.Length < 2) return false;
+      if (!string.Equals(tokens[0], CommandName, StringComparison.OrdinalIgnoreCase)) return false;
+
+      HashSet<string> targets = tokens[1]
+        .Split(',')
+        .Select(target => target.Trim())
+        .Where(target => target.Length > 0)
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+      return TargetNames.Overlaps(targets);
+    }
   }
 
   private sealed class ResetRecord(ResetSpec spec)
