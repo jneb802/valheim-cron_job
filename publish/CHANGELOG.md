@@ -1,3 +1,10 @@
+- v1.15
+  - Fixes Praetoris reset state tracking to match exact command and target names.
+  - Adds tracked reset state entries for Meadows beehive locations and Mistlands dungeons.
+
+- v1.14
+  - Adds Praetoris reset state JSON output for server info integrations.
+
 - v1.13
   - Adds new fields `globalKeys` and `bannedGlobalKeys` to allow skipping jobs based on global keys.
 
